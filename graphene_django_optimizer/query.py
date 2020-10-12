@@ -376,7 +376,11 @@ class QueryOptimizerStore():
             queryset = queryset.select_related(*self.select_list)
 
         if self.prefetch_list:
-            queryset = queryset.prefetch_related(*self.prefetch_list)
+            prefetches = []
+            for p in self.prefetch_list:
+                if p not in prefetches:
+                    prefetches.append(p)
+            queryset = queryset.prefetch_related(*prefetches)
 
         if self.only_list:
             queryset = queryset.only(*self.only_list)
