@@ -250,7 +250,11 @@ class QueryOptimizer(object):
         self._add_optimization_hints(
             optimization_hints.prefetch_related(info, *args), store.prefetch_list,
         )
-        if store.only_list is not None:
+
+        if optimization_hints.abort_only_optimization(info, *args):
+            store.abort_only_optimization()
+
+        elif store.only_list is not None:
             self._add_optimization_hints(
                 optimization_hints.only(info, *args), store.only_list,
             )
