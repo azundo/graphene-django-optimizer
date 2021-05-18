@@ -381,12 +381,29 @@ class QueryOptimizerStore:
         if not self.disable_abort_only:
             self.only_list = None
 
+    def _deduped_prefetch_list(self):
+        prefetches = {}
+        # first call set on self.prefetch_list to remove any duplicates and allow for duplicate
+        # optimization hints if the `Prefetch` object has the same identity
+        for prefetch in set(self.prefetch_list):
+            prefetch_to = getattr(prefetch, "prefetch_to", prefetch)
+            # if we already have a prefetch for this prefetch_to then just pass the relationship
+            # with no additional Prefetch queryset changes to exclude prefetches with extra `only`s
+            # this has the unfortunate effect of removing ordering in some cases so its not without
+            # its drawbacks
+            if prefetch_to in prefetches:
+                prefetches[prefetch_to] = prefetch_to
+            # otherwise keep the prefetch as is
+            else:
+                prefetches[prefetch_to] = prefetch
+        return prefetches.values()
+
     def optimize_queryset(self, queryset):
         if self.select_list:
             queryset = queryset.select_related(*self.select_list)
 
         if self.prefetch_list:
-            queryset = queryset.prefetch_related(*set(self.prefetch_list))
+            queryset = queryset.prefetch_related(*self._deduped_prefetch_list())
 
         if self.only_list:
             queryset = queryset.only(*self.only_list)
